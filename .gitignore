@@ -1,0 +1,46 @@
+# Build output (Qt Creator puts these in build/Desktop_..., yours are in ProjectChess/build/)
+build/
+build-*/
+cmake-build-*/
+
+# Qt Creator per-user settings (contain your local paths, e.g. C:\Users\...)
+CMakeLists.txt.user*
+*.user
+*.autosave
+.qtcreator/
+
+# CMake generated files (only matter if you build inside the source folder)
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+.qtc/
+
+# Qt generated files
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*_autogen/
+.rcc/
+.uic/
+
+# Compiled output
+*.exe
+*.o
+*.obj
+*.pdb
+*.ilk
+*.dll
+*.lib
+*.exp
+*.a
+*.so
+
+# IDE/editor and OS junk
+.vscode/
+.idea/
+.vs/
+Thumbs.db
+.DS_Store
