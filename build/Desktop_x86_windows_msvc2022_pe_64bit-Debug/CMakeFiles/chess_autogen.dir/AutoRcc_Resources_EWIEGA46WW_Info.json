@@ -1,0 +1,38 @@
+{
+	"BUILD_DIR" : "C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/build/Desktop_x86_windows_msvc2022_pe_64bit-Debug/chess_autogen",
+	"CMAKE_BINARY_DIR" : "C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/build/Desktop_x86_windows_msvc2022_pe_64bit-Debug",
+	"CMAKE_CURRENT_BINARY_DIR" : "C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/build/Desktop_x86_windows_msvc2022_pe_64bit-Debug",
+	"CMAKE_CURRENT_SOURCE_DIR" : "C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess",
+	"CMAKE_SOURCE_DIR" : "C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess",
+	"CROSS_CONFIG" : false,
+	"GENERATOR" : "Ninja",
+	"INCLUDE_DIR" : "C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/build/Desktop_x86_windows_msvc2022_pe_64bit-Debug/chess_autogen/include",
+	"INPUTS" : 
+	[
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/blackHorse.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/blackElephant.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/wp.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/blackPawn.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/whiteHorse.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/whiteElephant.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/bp.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/whiteKing.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/blackKing.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/blackRook.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/whitePawn.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/whiteRook.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/blackQueen.png",
+		"C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/images/whiteQueen.png"
+	],
+	"LOCK_FILE" : "C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/build/Desktop_x86_windows_msvc2022_pe_64bit-Debug/CMakeFiles/chess_autogen.dir/AutoRcc_Resources_EWIEGA46WW_Lock.lock",
+	"MULTI_CONFIG" : false,
+	"OPTIONS" : [ "--no-zstd", "-name", "Resources" ],
+	"OUTPUT_CHECKSUM" : "EWIEGA46WW",
+	"OUTPUT_NAME" : "qrc_Resources.cpp",
+	"RCC_EXECUTABLE" : "D:/Qt/6.7.2/msvc2019_64/./bin/rcc.exe",
+	"RCC_LIST_OPTIONS" : [ "--list" ],
+	"SETTINGS_FILE" : "C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/build/Desktop_x86_windows_msvc2022_pe_64bit-Debug/CMakeFiles/chess_autogen.dir/AutoRcc_Resources_EWIEGA46WW_Used.txt",
+	"SOURCE" : "C:/Users/\u041a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440/Documents/ProjectChess/Resources.qrc",
+	"USE_BETTER_GRAPH" : false,
+	"VERBOSITY" : 0
+}
