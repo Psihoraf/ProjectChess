@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QString>
 
+#include "chess_bot.h"
 #include "game_logic.h"
 
 QT_BEGIN_NAMESPACE
@@ -12,13 +13,20 @@ class MainWindow;
 }
 QT_END_NAMESPACE
 
+class bot_thread;
 class chess_table;
 class network_manager;
+class QComboBox;
 class QLabel;
 class QLineEdit;
 class QPushButton;
 class QSpinBox;
+class QStackedWidget;
 
+// The window holds four pages in a QStackedWidget:
+//   main menu  ->  computer settings  ->  game
+//              ->  network (host/join) ->  game
+// "Back" / "Main menu" buttons always lead back to the main menu.
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -28,12 +36,20 @@ public:
     ~MainWindow();
 
 private slots:
+    // navigation
+    void showMainMenu();            // leaves whatever is running (no question asked)
+    void onMenuButtonInGame();      // same, but asks first if a game is in progress
+
+    // starting games
+    void onStartComputerClicked();
     void onHostClicked();
     void onJoinClicked();
-    void onDisconnectClicked();
+
+    // in-game buttons
     void onResignClicked();
     void onNewGameClicked();
 
+    // network events
     void onListening(quint16 port);
     void onConnected();
     void onDisconnected();
@@ -42,28 +58,56 @@ private slots:
     void onResignReceived();
     void onNewGameReceived();
 
+    // computer player / status
+    void onBotFinished();
     void updateStatus();
 
 private:
-    enum class LinkState { Idle, Waiting, Playing };
+    enum class Mode { Network, Computer };
 
-    void setLinkState(LinkState state);
+    QWidget *buildMainMenuPage();
+    QWidget *buildComputerPage();
+    QWidget *buildNetworkPage();
+    QWidget *buildGamePage();
+
+    void setNetworkControlsEnabled(bool enabled);
     void startNewGame();
+    bool gameInProgress() const;
+    void maybeStartBot();
+    void cancelBot();
 
     Ui::MainWindow *ui;
     chess_table *board_;
     network_manager *net_;
+    bot_thread *botThread_ = nullptr;
 
+    QStackedWidget *pages_;
+    QWidget *menuPage_;
+    QWidget *computerPage_;
+    QWidget *networkPage_;
+    QWidget *gamePage_;
+
+    // computer settings page
+    QComboBox *difficultyCombo_;
+    QComboBox *colorCombo_;
+
+    // network page
     QLineEdit *hostEdit_;
     QSpinBox *portSpin_;
     QPushButton *hostBtn_;
     QPushButton *joinBtn_;
-    QPushButton *disconnectBtn_;
+    QLabel *netStatusLabel_;
+
+    // game page
+    QLabel *gameStatusLabel_;
     QPushButton *resignBtn_;
     QPushButton *newGameBtn_;
-    QLabel *statusLabel_;
+    QPushButton *menuBtn_;
 
-    LinkState state_ = LinkState::Idle;
+    Mode mode_ = Mode::Computer;
+    chess::BotLevel botLevel_ = chess::BotLevel::Medium;
+    bool playing_ = false;          // a game is on the game page
+    bool connectionLost_ = false;   // network game whose opponent is gone
     bool resigned_ = false;
     QString resignText_;
 };

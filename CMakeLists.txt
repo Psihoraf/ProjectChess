@@ -21,6 +21,8 @@ set(PROJECT_SOURCES
         figures.h figures.cpp
         game_logic.h game_logic.cpp
         network_manager.h network_manager.cpp
+        chess_bot.h chess_bot.cpp
+        bot_thread.h bot_thread.cpp
         Resources.qrc
 )
 
@@ -28,7 +30,6 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(chess
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        .gitignore
     )
 else()
     if(ANDROID)

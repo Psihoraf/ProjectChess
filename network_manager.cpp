@@ -44,7 +44,7 @@ void network_manager::host(quint16 port)
     server_ = new QTcpServer(this);
     connect(server_, &QTcpServer::newConnection, this, &network_manager::onNewConnection);
 
-    if (!server_->listen(QHostAddress::LocalHost, port)) {
+    if (!server_->listen(QHostAddress::Any, port)) {
         const QString reason = server_->errorString();
         close();
         emit errorOccurred(tr("Cannot listen on port %1: %2").arg(port).arg(reason));

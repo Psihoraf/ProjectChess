@@ -46,6 +46,8 @@ enum class GameStatus {
     DrawRepetition
 };
 
+class chess_bot;
+
 class game_logic
 {
 public:
@@ -80,6 +82,8 @@ public:
     bool makeMove(const Move &move);
 
 private:
+    friend class chess_bot;   // the computer player searches on raw States
+
     struct State {
         Piece board[8][8];
         Color turn = Color::White;
