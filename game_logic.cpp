@@ -19,6 +19,17 @@ inline bool inBounds(int r, int c) { return r >= 0 && r < 8 && c >= 0 && c < 8; 
 inline int ci(Color c) { return c == Color::White ? 0 : 1; }
 inline int homeRow(Color c) { return c == Color::White ? 7 : 0; }
 inline int pawnDir(Color c) { return c == Color::White ? -1 : 1; }
+inline char pieceLetter(PieceType t)
+{
+    switch (t) {
+    case PieceType::Knight: return 'N';
+    case PieceType::Bishop: return 'B';
+    case PieceType::Rook:   return 'R';
+    case PieceType::Queen:  return 'Q';
+    case PieceType::King:   return 'K';
+    default:                return '?';
+    }
+}
 
 } // namespace
 
@@ -99,6 +110,7 @@ bool game_logic::loadFen(const std::string &fen)
             captured_[i][j] = 0;
     hasLast_ = false;
     lastMove_ = Move();
+    history_.clear();
     positionCounts_.clear();
     positionCounts_[positionKey(state_)] = 1;
     status_ = GameStatus::Ongoing;
@@ -116,6 +128,98 @@ Piece game_logic::pieceAt(int row, int col) const
 int game_logic::capturedCount(Color victimColor, PieceType type) const
 {
     return captured_[ci(victimColor)][static_cast<int>(type)];
+}
+
+std::string game_logic::sanAt(int ply) const
+{
+    if (ply < 0 || ply >= static_cast<int>(history_.size()))
+        return std::string();
+    return history_[static_cast<size_t>(ply)].san;
+}
+
+bool game_logic::undoMove()
+{
+    if (history_.empty())
+        return false;
+
+    // The position we are leaving was counted once when it was reached.
+    const auto it = positionCounts_.find(positionKey(state_));
+    if (it != positionCounts_.end() && --it->second <= 0)
+        positionCounts_.erase(it);
+
+    const HistoryEntry &e = history_.back();
+    state_ = e.before;
+    for (int i = 0; i < 2; ++i)
+        for (int j = 0; j < 7; ++j)
+            captured_[i][j] = e.captured[i][j];
+    lastMove_ = e.lastMove;
+    hasLast_ = e.hadLast;
+    history_.pop_back();
+
+    updateStatus();
+    return true;
+}
+
+// Standard algebraic notation without the check / mate suffix.
+std::string game_logic::sanBase(const State &s, const Move &m)
+{
+    const Piece p = s.board[m.fromRow][m.fromCol];
+    const bool capture = !s.board[m.toRow][m.toCol].empty()
+                         || (p.type == PieceType::Pawn && m.fromCol != m.toCol);
+
+    if (p.type == PieceType::King && std::abs(m.toCol - m.fromCol) == 2)
+        return (m.toCol > m.fromCol) ? "O-O" : "O-O-O";
+
+    std::string dest;
+    dest += static_cast<char>('a' + m.toCol);
+    dest += static_cast<char>('8' - m.toRow);
+
+    std::string san;
+    if (p.type == PieceType::Pawn) {
+        if (capture) {
+            san += static_cast<char>('a' + m.fromCol);
+            san += 'x';
+        }
+        san += dest;
+        if (m.promotion != PieceType::NoPiece) {
+            san += '=';
+            san += pieceLetter(m.promotion);
+        }
+        return san;
+    }
+
+    san += pieceLetter(p.type);
+
+    // Another piece of the same kind that can also reach the square?
+    bool other = false, sameFile = false, sameRank = false;
+    for (int r = 0; r < 8; ++r)
+        for (int c = 0; c < 8; ++c) {
+            if ((r == m.fromRow && c == m.fromCol)
+                || s.board[r][c].type != p.type || s.board[r][c].color != p.color)
+                continue;
+            for (const Move &lm : legalFrom(s, r, c)) {
+                if (lm.toRow == m.toRow && lm.toCol == m.toCol) {
+                    other = true;
+                    if (c == m.fromCol) sameFile = true;
+                    if (r == m.fromRow) sameRank = true;
+                    break;
+                }
+            }
+        }
+    if (other) {
+        if (!sameFile) {
+            san += static_cast<char>('a' + m.fromCol);
+        } else if (!sameRank) {
+            san += static_cast<char>('8' - m.fromRow);
+        } else {
+            san += static_cast<char>('a' + m.fromCol);
+            san += static_cast<char>('8' - m.fromRow);
+        }
+    }
+    if (capture)
+        san += 'x';
+    san += dest;
+    return san;
 }
 
 bool game_logic::isGameOver() const
@@ -480,6 +584,15 @@ bool game_logic::makeMove(const Move &m)
     if (victim.empty() && mover.type == PieceType::Pawn && chosen.fromCol != chosen.toCol)
         victim = state_.board[chosen.fromRow][chosen.toCol];       // en passant
 
+    HistoryEntry entry;
+    entry.before = state_;
+    for (int i = 0; i < 2; ++i)
+        for (int j = 0; j < 7; ++j)
+            entry.captured[i][j] = captured_[i][j];
+    entry.lastMove = lastMove_;
+    entry.hadLast = hasLast_;
+    entry.san = sanBase(state_, chosen);
+
     applyMove(state_, chosen);
     if (!victim.empty())
         ++captured_[ci(victim.color)][static_cast<int>(victim.type)];
@@ -487,6 +600,12 @@ bool game_logic::makeMove(const Move &m)
     hasLast_ = true;
     ++positionCounts_[positionKey(state_)];
     updateStatus();
+
+    if (status_ == GameStatus::Checkmate)
+        entry.san += '#';
+    else if (inCheckState(state_, state_.turn))
+        entry.san += '+';
+    history_.push_back(entry);
     return true;
 }
 

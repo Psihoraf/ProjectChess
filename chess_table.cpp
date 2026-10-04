@@ -76,6 +76,19 @@ bool chess_table::applyRemoteMove(const chess::Move &move)
     return true;
 }
 
+bool chess_table::undoPlies(int count)
+{
+    bool any = false;
+    for (int i = 0; i < count && logic_.undoMove(); ++i)
+        any = true;
+    if (any) {
+        clearSelection();
+        redraw();
+        emit positionChanged();
+    }
+    return any;
+}
+
 // ---------------------------------------------------------------------------
 // Input
 // ---------------------------------------------------------------------------

@@ -44,7 +44,7 @@ void network_manager::host(quint16 port)
     server_ = new QTcpServer(this);
     connect(server_, &QTcpServer::newConnection, this, &network_manager::onNewConnection);
 
-    if (!server_->listen(QHostAddress::Any, port)) {
+    if (!server_->listen(QHostAddress::LocalHost, port)) {
         const QString reason = server_->errorString();
         close();
         emit errorOccurred(tr("Cannot listen on port %1: %2").arg(port).arg(reason));
@@ -151,6 +151,16 @@ void network_manager::onReadyRead()
             emit resignReceived();
         } else if (parts[0] == "NEWGAME") {
             emit newGameReceived();
+        } else if (parts[0] == "UNDO_REQ" && parts.size() == 3) {
+            bool ok1 = false, ok2 = false;
+            const int count = parts[1].toInt(&ok1);
+            const int plies = parts[2].toInt(&ok2);
+            if (ok1 && ok2 && count >= 0 && count < 100000 && plies >= 1 && plies <= 2)
+                emit undoRequested(count, plies);
+        } else if (parts[0] == "UNDO_OK") {
+            emit undoAnswered(true);
+        } else if (parts[0] == "UNDO_NO") {
+            emit undoAnswered(false);
         }
     }
 }
@@ -177,4 +187,14 @@ void network_manager::sendResign()
 void network_manager::sendNewGame()
 {
     sendLine(QStringLiteral("NEWGAME"));
+}
+
+void network_manager::sendUndoRequest(int plyCount, int plies)
+{
+    sendLine(QStringLiteral("UNDO_REQ %1 %2").arg(plyCount).arg(plies));
+}
+
+void network_manager::sendUndoReply(bool accepted)
+{
+    sendLine(accepted ? QStringLiteral("UNDO_OK") : QStringLiteral("UNDO_NO"));
 }

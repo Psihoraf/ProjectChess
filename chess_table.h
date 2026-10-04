@@ -22,6 +22,7 @@ public:
     chess::Color localColor() const { return localColor_; }
     void setInteractive(bool enabled);        // false = clicks are ignored
     bool applyRemoteMove(const chess::Move &move);
+    bool undoPlies(int count);                // takes back `count` half-moves (stops early at the start)
     const chess::game_logic &logic() const { return logic_; }
 
 signals:

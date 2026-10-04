@@ -24,6 +24,7 @@ set(PROJECT_SOURCES
         chess_bot.h chess_bot.cpp
         bot_thread.h bot_thread.cpp
         captured_panel.h captured_panel.cpp
+        move_list.h move_list.cpp
         Resources.qrc
 )
 

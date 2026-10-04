@@ -16,10 +16,12 @@ QT_END_NAMESPACE
 class bot_thread;
 class captured_panel;
 class chess_table;
+class move_list;
 class network_manager;
 class QComboBox;
 class QLabel;
 class QLineEdit;
+class QMessageBox;
 class QPushButton;
 class QSpinBox;
 class QStackedWidget;
@@ -49,6 +51,7 @@ private slots:
     // in-game buttons
     void onResignClicked();
     void onNewGameClicked();
+    void onUndoClicked();
 
     // network events
     void onListening(quint16 port);
@@ -58,9 +61,12 @@ private slots:
     void onMoveReceived(const chess::Move &move);
     void onResignReceived();
     void onNewGameReceived();
+    void onUndoRequested(int plyCount, int plies);
+    void onUndoAnswered(bool accepted);
 
     // computer player / status
     void onBotFinished();
+    void onBoardChanged();          // any change of the position: refreshes panels and status
     void updateStatus();
 
 private:
@@ -76,6 +82,9 @@ private:
     bool gameInProgress() const;
     void maybeStartBot();
     void cancelBot();
+    bool undoAvailable() const;
+    void updateUndoButton();
+    void closeUndoDialog();
 
     Ui::MainWindow *ui;
     chess_table *board_;
@@ -102,6 +111,8 @@ private:
     // game page
     QLabel *gameStatusLabel_;
     captured_panel *capturedPanel_;
+    move_list *moveList_;
+    QPushButton *undoBtn_;
     QPushButton *resignBtn_;
     QPushButton *newGameBtn_;
     QPushButton *menuBtn_;
@@ -112,6 +123,12 @@ private:
     bool connectionLost_ = false;   // network game whose opponent is gone
     bool resigned_ = false;
     QString resignText_;
+    QString notice_;                // extra line under the status (undo answers etc.)
+
+    // taking back moves in a network game
+    bool undoPending_ = false;      // we asked, the opponent has not answered yet
+    int undoPendingPlies_ = 0;
+    QMessageBox *undoDialog_ = nullptr;   // the question shown to us when the opponent asks
 };
 
 #endif // MAINWINDOW_H

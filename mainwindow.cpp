@@ -18,6 +18,7 @@
 #include "bot_thread.h"
 #include "captured_panel.h"
 #include "chess_table.h"
+#include "move_list.h"
 #include "network_manager.h"
 
 namespace {
@@ -51,7 +52,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     setWindowTitle(tr("Chess"));
-    resize(1000, 800);
+    resize(1050, 850);
 
     board_ = new chess_table(this);     // gets re-parented into the game page
     net_ = new network_manager(this);
@@ -75,10 +76,7 @@ MainWindow::MainWindow(QWidget *parent)
         if (mode_ == Mode::Network)
             net_->sendMove(m);
     });
-    connect(board_, &chess_table::positionChanged, this, &MainWindow::updateStatus);
-    connect(board_, &chess_table::positionChanged, this, [this] {
-        capturedPanel_->refresh(board_->logic(), board_->localColor());
-    });
+    connect(board_, &chess_table::positionChanged, this, &MainWindow::onBoardChanged);
 
     connect(net_, &network_manager::listening, this, &MainWindow::onListening);
     connect(net_, &network_manager::connected, this, &MainWindow::onConnected);
@@ -87,6 +85,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(net_, &network_manager::moveReceived, this, &MainWindow::onMoveReceived);
     connect(net_, &network_manager::resignReceived, this, &MainWindow::onResignReceived);
     connect(net_, &network_manager::newGameReceived, this, &MainWindow::onNewGameReceived);
+    connect(net_, &network_manager::undoRequested, this, &MainWindow::onUndoRequested);
+    connect(net_, &network_manager::undoAnswered, this, &MainWindow::onUndoAnswered);
 
     showMainMenu();
 }
@@ -227,14 +227,20 @@ QWidget *MainWindow::buildGamePage()
     gameStatusLabel_->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     gameStatusLabel_->setMinimumHeight(100);
 
+    undoBtn_ = new QPushButton(tr("Undo move"));
     resignBtn_ = new QPushButton(tr("Resign"));
     newGameBtn_ = new QPushButton(tr("New game"));
     menuBtn_ = new QPushButton(tr("Main menu"));
+    moveList_ = new move_list;
+
+    QHBoxLayout *buttonRow = new QHBoxLayout;
+    buttonRow->addWidget(undoBtn_);
+    buttonRow->addWidget(resignBtn_);
 
     sl->addWidget(gameStatusLabel_);
-    sl->addWidget(resignBtn_);
+    sl->addLayout(buttonRow);
     sl->addWidget(newGameBtn_);
-    sl->addStretch(1);
+    sl->addWidget(moveList_, 1);                // the list takes the free space
     capturedPanel_ = new captured_panel;        // bottom right: captured pieces and counts
     sl->addWidget(capturedPanel_);
     sl->addWidget(menuBtn_);
@@ -242,6 +248,7 @@ QWidget *MainWindow::buildGamePage()
     lay->addWidget(board_, 1);
     lay->addWidget(side);
 
+    connect(undoBtn_, &QPushButton::clicked, this, &MainWindow::onUndoClicked);
     connect(resignBtn_, &QPushButton::clicked, this, &MainWindow::onResignClicked);
     connect(newGameBtn_, &QPushButton::clicked, this, &MainWindow::onNewGameClicked);
     connect(menuBtn_, &QPushButton::clicked, this, &MainWindow::onMenuButtonInGame);
@@ -255,7 +262,10 @@ QWidget *MainWindow::buildGamePage()
 void MainWindow::showMainMenu()
 {
     cancelBot();
+    closeUndoDialog();
     net_->close();                         // stops listening / drops the connection
+    undoPending_ = false;
+    notice_.clear();
     playing_ = false;
     connectionLost_ = false;
     resigned_ = false;
@@ -300,9 +310,13 @@ void MainWindow::setNetworkControlsEnabled(bool enabled)
 void MainWindow::startNewGame()
 {
     cancelBot();
+    closeUndoDialog();
+    undoPending_ = false;
+    notice_.clear();
     resigned_ = false;
     resignText_.clear();
     connectionLost_ = false;
+    undoBtn_->setText(mode_ == Mode::Computer ? tr("Undo move") : tr("Ask to undo"));
     board_->newGame();            // emits positionChanged -> updateStatus()
     board_->setInteractive(true);
     updateStatus();
@@ -360,14 +374,17 @@ void MainWindow::updateStatus()
     }
 
     const QString who = (me == chess::Color::White) ? tr("You play White.") : tr("You play Black.");
+    if (!notice_.isEmpty())
+        text += QLatin1Char('\n') + notice_;
     gameStatusLabel_->setText(who + QLatin1Char('\n') + text);
 
-    board_->setInteractive(!over);
+    board_->setInteractive(!over && !undoPending_);   // frozen while we wait for an undo answer
     resignBtn_->setEnabled(!over);
     newGameBtn_->setEnabled(over || vsComputer);   // against the computer you can restart any time
 
     if (!over)
         maybeStartBot();
+    updateUndoButton();                            // after the bot may have started
 }
 
 void MainWindow::onResignClicked()
@@ -503,6 +520,9 @@ void MainWindow::onDisconnected()
     board_->setInteractive(false);
     resignBtn_->setEnabled(false);
     newGameBtn_->setEnabled(false);
+    undoPending_ = false;
+    closeUndoDialog();
+    updateUndoButton();
     gameStatusLabel_->setText(tr("The opponent disconnected.\n"
                                  "Use \"Main menu\" to start another game."));
 }
@@ -514,6 +534,9 @@ void MainWindow::onNetworkError(const QString &message)
         board_->setInteractive(false);
         resignBtn_->setEnabled(false);
         newGameBtn_->setEnabled(false);
+        undoPending_ = false;
+        closeUndoDialog();
+        updateUndoButton();
         gameStatusLabel_->setText(message);
         return;
     }
@@ -531,6 +554,9 @@ void MainWindow::onMoveReceived(const chess::Move &move)
         board_->setInteractive(false);
         resignBtn_->setEnabled(false);
         newGameBtn_->setEnabled(false);
+        undoPending_ = false;
+        closeUndoDialog();
+        updateUndoButton();
         gameStatusLabel_->setText(tr("The opponent sent an illegal move. Connection closed.\n"
                                      "Use \"Main menu\" to start another game."));
     }
@@ -550,4 +576,142 @@ void MainWindow::onNewGameReceived()
     if (mode_ != Mode::Network || !playing_ || connectionLost_)
         return;
     startNewGame();
+}
+
+// ---------------------------------------------------------------------------
+// Move list, undo
+// ---------------------------------------------------------------------------
+
+void MainWindow::onBoardChanged()
+{
+    notice_.clear();
+    capturedPanel_->refresh(board_->logic(), board_->localColor());
+    moveList_->refresh(board_->logic());
+    updateStatus();
+}
+
+// Undo takes the game back to the last position where it was YOUR turn:
+// your own move if the opponent has not answered yet, otherwise both moves.
+bool MainWindow::undoAvailable() const
+{
+    if (!playing_ || connectionLost_ || resigned_)
+        return false;
+
+    const chess::game_logic &g = board_->logic();
+    const chess::Color me = board_->localColor();
+    const int plies = (g.turn() == me) ? 2 : 1;
+    if (g.moveCount() < plies)
+        return false;
+
+    if (mode_ == Mode::Computer)
+        return botThread_ == nullptr;             // not while the computer is thinking
+
+    // Network: the first move to be taken back must be ours, and no question may be open.
+    const bool firstIsWhite = ((g.moveCount() - plies) % 2 == 0);
+    if (firstIsWhite != (me == chess::Color::White))
+        return false;
+    return !undoPending_ && !undoDialog_;
+}
+
+void MainWindow::updateUndoButton()
+{
+    undoBtn_->setEnabled(undoAvailable());
+}
+
+void MainWindow::closeUndoDialog()
+{
+    if (!undoDialog_)
+        return;
+    QMessageBox *box = undoDialog_;
+    undoDialog_ = nullptr;
+    box->close();                                  // deletes itself when closed
+}
+
+void MainWindow::onUndoClicked()
+{
+    if (!undoAvailable())
+        return;
+
+    const chess::game_logic &g = board_->logic();
+    const int plies = (g.turn() == board_->localColor()) ? 2 : 1;
+
+    if (mode_ == Mode::Computer) {
+        cancelBot();
+        board_->undoPlies(plies);                  // -> onBoardChanged()
+        return;
+    }
+
+    // Network game: the opponent has to agree.
+    undoPending_ = true;
+    undoPendingPlies_ = plies;
+    net_->sendUndoRequest(g.moveCount(), plies);
+    notice_ = tr("Undo requested. Waiting for the opponent's answer...");
+    updateStatus();
+}
+
+void MainWindow::onUndoRequested(int plyCount, int plies)
+{
+    if (mode_ != Mode::Network || !playing_ || connectionLost_ || resigned_) {
+        net_->sendUndoReply(false);
+        return;
+    }
+
+    // Is the request still about the position we are looking at?
+    const chess::game_logic &g = board_->logic();
+    const chess::Color asker = chess::opposite(board_->localColor());
+    const bool askerToMove = (g.turn() == asker);
+    const bool firstIsWhite = ((plyCount - plies) % 2 == 0);
+    const bool valid = plyCount == g.moveCount()
+                       && plies == (askerToMove ? 2 : 1)
+                       && plies <= plyCount
+                       && firstIsWhite == (asker == chess::Color::White)
+                       && !undoPending_ && !undoDialog_;
+    if (!valid) {
+        net_->sendUndoReply(false);
+        return;
+    }
+
+    QMessageBox *box = new QMessageBox(QMessageBox::Question, tr("Take back a move"),
+                                       tr("Your opponent asks to take back their last move.\n"
+                                          "Do you allow it?"),
+                                       QMessageBox::Yes | QMessageBox::No, this);
+    box->setDefaultButton(QMessageBox::No);
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    undoDialog_ = box;
+
+    connect(box, &QObject::destroyed, this, [this, box] {
+        if (undoDialog_ == box)                    // not a newer dialog
+            undoDialog_ = nullptr;
+        updateUndoButton();
+    });
+    connect(box, &QDialog::finished, this, [this, plyCount, plies](int result) {
+        const bool stillValid = playing_ && !connectionLost_ && !resigned_
+                                && mode_ == Mode::Network
+                                && board_->logic().moveCount() == plyCount;
+        if (result == QMessageBox::Yes && stillValid) {
+            net_->sendUndoReply(true);
+            board_->undoPlies(plies);
+            notice_ = tr("The opponent's move was taken back.");
+            updateStatus();
+        } else if (net_->isConnected()) {
+            net_->sendUndoReply(false);
+        }
+    });
+    box->open();                                   // does not block the event loop
+    updateUndoButton();
+}
+
+void MainWindow::onUndoAnswered(bool accepted)
+{
+    if (!undoPending_)
+        return;
+    undoPending_ = false;
+
+    if (accepted) {
+        board_->undoPlies(undoPendingPlies_);
+        notice_ = tr("Your move was taken back.");
+    } else {
+        notice_ = tr("The opponent declined your undo request.");
+    }
+    updateStatus();
 }

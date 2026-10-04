@@ -14,6 +14,8 @@ class QTcpSocket;
 //   MOVE <fromRow> <fromCol> <toRow> <toCol> <promotion 0..6>
 //   RESIGN
 //   NEWGAME
+//   UNDO_REQ <plyCount> <plies>   (ask to take back the last `plies` half-moves)
+//   UNDO_OK / UNDO_NO             (answer to UNDO_REQ)
 // The host listens on 127.0.0.1 and plays White; the joiner plays Black.
 class network_manager : public QObject
 {
@@ -33,6 +35,8 @@ public:
     void sendMove(const chess::Move &move);
     void sendResign();
     void sendNewGame();
+    void sendUndoRequest(int plyCount, int plies);
+    void sendUndoReply(bool accepted);
 
 signals:
     void listening(quint16 port);
@@ -41,6 +45,8 @@ signals:
     void moveReceived(const chess::Move &move);
     void resignReceived();
     void newGameReceived();
+    void undoRequested(int plyCount, int plies);
+    void undoAnswered(bool accepted);
     void errorOccurred(const QString &message);
 
 private slots:

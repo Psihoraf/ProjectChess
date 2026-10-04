@@ -71,6 +71,12 @@ public:
     // (a captured promoted piece counts as the piece it had become).
     int capturedCount(Color victimColor, PieceType type) const;
 
+    // --- move history and undo -------------------------------------------
+    int moveCount() const { return static_cast<int>(history_.size()); }   // half-moves played
+    std::string sanAt(int ply) const;       // standard notation: "e4", "Nf3", "exd5", "O-O", "e8=Q+", "Qxf7#"
+    bool canUndo() const { return !history_.empty(); }
+    bool undoMove();                        // takes back the last half-move
+
     // Legal moves of the piece on (row, col). Empty if it is not that side's
     // turn, the square is empty, or the game is over. A pawn move to the last
     // rank is returned 4 times (one per promotion piece).
@@ -98,6 +104,15 @@ private:
         int fullmove = 1;
     };
 
+    // Everything needed to take one half-move back.
+    struct HistoryEntry {
+        State before;
+        int captured[2][7] = {};
+        Move lastMove;
+        bool hadLast = false;
+        std::string san;
+    };
+
     // Static helpers work on an explicit State so they can try moves on copies.
     static bool isAttacked(const State &s, int row, int col, Color by);
     static bool findKing(const State &s, Color color, int &row, int &col);
@@ -109,6 +124,7 @@ private:
     static void applyMove(State &s, const Move &m);
     static bool insufficientMaterial(const State &s);
     static std::string positionKey(const State &s);
+    static std::string sanBase(const State &before, const Move &m);   // notation without + or #
 
     void updateStatus();
 
@@ -117,6 +133,7 @@ private:
     Move lastMove_;
     bool hasLast_ = false;
     int captured_[2][7] = {};   // [colour of the captured piece][PieceType]
+    std::vector<HistoryEntry> history_;
     std::map<std::string, int> positionCounts_;
 };
 

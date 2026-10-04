@@ -19,6 +19,10 @@ computer or against another person over the network.
   are always at the bottom.
 - **Captured pieces panel** (bottom right) showing which pieces each side has
   taken and how many of each type.
+- **Move list** (right side) in standard notation (`e4`, `Nf3`, `exd5`, `O-O`,
+  `e8=Q+`, `Qxf7#`), with the latest move in bold.
+- **Undo**: take back moves. Against the computer it works at once; in a network
+  game the opponent is asked and can accept or decline.
 - Resign and New game buttons.
 
 ## Requirements
@@ -57,6 +61,18 @@ mix old and new class layouts.
 5. Use *Main menu* at any time to leave. If a game is still running you will be
    asked to confirm.
 
+### Taking back moves
+
+- **Undo move** (against the computer) goes back to the last position where it
+  was your turn: your move and the computer's answer are both taken back. It is
+  not available while the computer is thinking.
+- **Ask to undo** (network game) sends a request to your opponent, who sees a
+  question and can answer Yes or No. Until the answer arrives your board is
+  locked. If the opponent already replied to your move, both moves are taken
+  back; if not, only your move is. The request is declined automatically if the
+  position has changed in the meantime.
+- You cannot undo after a resignation.
+
 ### Computer levels
 
 | Level  | Behaviour |
@@ -93,6 +109,9 @@ Messages are plain text lines, one per message:
 MOVE <fromRow> <fromCol> <toRow> <toCol> <promotion>
 RESIGN
 NEWGAME
+UNDO_REQ <moves played so far> <half-moves to take back>
+UNDO_OK
+UNDO_NO
 ```
 
 Rows and columns are numbered 0 to 7. Row 0 is rank 8 and column 0 is file A.
@@ -110,6 +129,7 @@ The promotion value is the piece type number (0 means none).
 | `bot_thread.h/.cpp` | Runs the computer's search on a worker thread so the window stays responsive. |
 | `network_manager.h/.cpp` | TCP host/join and the message protocol. |
 | `captured_panel.h/.cpp` | The captured pieces panel. |
+| `move_list.h/.cpp` | The move list table (standard notation). |
 | `figures.h/.cpp` | Loads the piece images. |
 | `Resources.qrc`, `images/` | Piece images. |
 | `mainwindow.ui` | Qt Designer file for the main window. |
@@ -133,7 +153,6 @@ blackKing.png    whiteKing.png
 
 ## Not implemented yet
 
-- Move list / history and undo
 - Draw offers and a game clock
 - Saving and loading games
 - Opening book for the computer
