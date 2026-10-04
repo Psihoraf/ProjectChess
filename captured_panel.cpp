@@ -12,7 +12,7 @@ const chess::PieceType kTypes[5] = {
     chess::PieceType::Rook, chess::PieceType::Queen
 };
 
-const int kIcon = 30;      // icon size in pixels
+const int kIcon = 15;      // icon size in pixels
 const int kSlot = 52;      // width of one "icon + xN" slot
 
 inline int colorIndex(chess::Color c) { return c == chess::Color::White ? 0 : 1; }

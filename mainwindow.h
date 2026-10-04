@@ -14,6 +14,7 @@ class MainWindow;
 QT_END_NAMESPACE
 
 class bot_thread;
+class captured_panel;
 class chess_table;
 class network_manager;
 class QComboBox;
@@ -100,6 +101,7 @@ private:
 
     // game page
     QLabel *gameStatusLabel_;
+    captured_panel *capturedPanel_;
     QPushButton *resignBtn_;
     QPushButton *newGameBtn_;
     QPushButton *menuBtn_;

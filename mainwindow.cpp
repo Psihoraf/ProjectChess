@@ -16,6 +16,7 @@
 #include <QVBoxLayout>
 
 #include "bot_thread.h"
+#include "captured_panel.h"
 #include "chess_table.h"
 #include "network_manager.h"
 
@@ -75,6 +76,9 @@ MainWindow::MainWindow(QWidget *parent)
             net_->sendMove(m);
     });
     connect(board_, &chess_table::positionChanged, this, &MainWindow::updateStatus);
+    connect(board_, &chess_table::positionChanged, this, [this] {
+        capturedPanel_->refresh(board_->logic(), board_->localColor());
+    });
 
     connect(net_, &network_manager::listening, this, &MainWindow::onListening);
     connect(net_, &network_manager::connected, this, &MainWindow::onConnected);
@@ -215,7 +219,7 @@ QWidget *MainWindow::buildGamePage()
     QHBoxLayout *lay = new QHBoxLayout(page);
 
     QWidget *side = new QWidget;
-    side->setFixedWidth(260);
+    side->setFixedWidth(280);
     QVBoxLayout *sl = new QVBoxLayout(side);
 
     gameStatusLabel_ = new QLabel;
@@ -231,6 +235,8 @@ QWidget *MainWindow::buildGamePage()
     sl->addWidget(resignBtn_);
     sl->addWidget(newGameBtn_);
     sl->addStretch(1);
+    capturedPanel_ = new captured_panel;        // bottom right: captured pieces and counts
+    sl->addWidget(capturedPanel_);
     sl->addWidget(menuBtn_);
 
     lay->addWidget(board_, 1);

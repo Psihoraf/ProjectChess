@@ -94,6 +94,9 @@ bool game_logic::loadFen(const std::string &fen)
     s.fullmove = full;
 
     state_ = s;
+    for (int i = 0; i < 2; ++i)
+        for (int j = 0; j < 7; ++j)
+            captured_[i][j] = 0;
     hasLast_ = false;
     lastMove_ = Move();
     positionCounts_.clear();
@@ -108,6 +111,11 @@ Piece game_logic::pieceAt(int row, int col) const
     if (!inBounds(row, col))
         return Piece();
     return state_.board[row][col];
+}
+
+int game_logic::capturedCount(Color victimColor, PieceType type) const
+{
+    return captured_[ci(victimColor)][static_cast<int>(type)];
 }
 
 bool game_logic::isGameOver() const
@@ -466,7 +474,15 @@ bool game_logic::makeMove(const Move &m)
     if (!found)
         return false;
 
+    // Remember what gets captured (for the captured-pieces display).
+    const Piece mover = state_.board[chosen.fromRow][chosen.fromCol];
+    Piece victim = state_.board[chosen.toRow][chosen.toCol];
+    if (victim.empty() && mover.type == PieceType::Pawn && chosen.fromCol != chosen.toCol)
+        victim = state_.board[chosen.fromRow][chosen.toCol];       // en passant
+
     applyMove(state_, chosen);
+    if (!victim.empty())
+        ++captured_[ci(victim.color)][static_cast<int>(victim.type)];
     lastMove_ = chosen;
     hasLast_ = true;
     ++positionCounts_[positionKey(state_)];

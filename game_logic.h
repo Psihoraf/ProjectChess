@@ -67,6 +67,10 @@ public:
     const Move &lastMove() const { return lastMove_; }
     int halfmoveClock() const { return state_.halfmove; }
 
+    // How many pieces of this colour and type have been captured so far
+    // (a captured promoted piece counts as the piece it had become).
+    int capturedCount(Color victimColor, PieceType type) const;
+
     // Legal moves of the piece on (row, col). Empty if it is not that side's
     // turn, the square is empty, or the game is over. A pawn move to the last
     // rank is returned 4 times (one per promotion piece).
@@ -112,6 +116,7 @@ private:
     GameStatus status_ = GameStatus::Ongoing;
     Move lastMove_;
     bool hasLast_ = false;
+    int captured_[2][7] = {};   // [colour of the captured piece][PieceType]
     std::map<std::string, int> positionCounts_;
 };
 

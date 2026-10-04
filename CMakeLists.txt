@@ -23,6 +23,7 @@ set(PROJECT_SOURCES
         network_manager.h network_manager.cpp
         chess_bot.h chess_bot.cpp
         bot_thread.h bot_thread.cpp
+        captured_panel.h captured_panel.cpp
         Resources.qrc
 )
 
